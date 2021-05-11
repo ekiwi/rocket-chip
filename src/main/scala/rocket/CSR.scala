@@ -11,8 +11,10 @@ import freechips.rocketchip.devices.debug.DebugModuleKey
 import freechips.rocketchip.tile._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property._
+
 import scala.collection.mutable.LinkedHashMap
 import Instructions._
+import chisel3.experimental.ChiselEnum
 
 class MStatus extends Bundle {
   // not truly part of mstatus, but convenient
@@ -301,6 +303,10 @@ class VType(implicit p: Parameters) extends CoreBundle {
     val isZero = vill || useZero
     Mux(!isZero && atLeastVLMax, vlMax, 0.U) | Mux(!isZero && !atLeastVLMax, avl_lsbs, 0.U)
   }
+}
+
+object CSRFileCause extends ChiselEnum { // TODO: better name
+  val noCause, mCause, hCause, sCause, uCause = Value
 }
 
 class CSRFile(
@@ -748,7 +754,7 @@ class CSRFile(
   assert(!reg_singleStepped || io.retire === UInt(0))
 
   val epc = formEPC(io.pc)
-  val noCause :: mCause :: hCause :: sCause :: uCause :: Nil = Enum(5)
+  import CSRFileCause._
   val xcause_dest = Wire(init = noCause)
 
   when (exception) {

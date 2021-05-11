@@ -13,7 +13,7 @@ import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property._
 import chisel3.{DontCare, WireInit, dontTouch, withClock}
-import chisel3.experimental.{chiselName, NoChiselNamePrefix}
+import chisel3.experimental.{ChiselEnum, NoChiselNamePrefix, chiselName}
 import chisel3.internal.sourceinfo.SourceInfo
 import TLMessages._
 
@@ -91,6 +91,12 @@ class DCacheTLBPort(implicit p: Parameters) extends CoreBundle()(p) {
   val req = Flipped(Decoupled(new TLBReq(coreDataBytes.log2)))
   val s1_resp = Output(new TLBResp)
   val s2_kill = Input(Bool())
+}
+
+object DCacheModuleState extends ChiselEnum {
+  val s_ready, s_voluntary_writeback, s_probe_rep_dirty, s_probe_rep_clean,
+      s_probe_retry, s_probe_rep_miss, s_voluntary_write_meta, s_probe_write_meta,
+      s_dummy, s_voluntary_release = Value
 }
 
 @chiselName
@@ -193,7 +199,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   val s1_flush_valid = Reg(Bool())
   val s1_waw_hazard = Wire(Bool())
 
-  val s_ready :: s_voluntary_writeback :: s_probe_rep_dirty :: s_probe_rep_clean :: s_probe_retry :: s_probe_rep_miss :: s_voluntary_write_meta :: s_probe_write_meta :: s_dummy :: s_voluntary_release :: Nil = Enum(UInt(), 10)
+  import DCacheModuleState._
   val supports_flush = outer.flushOnFenceI || coreParams.haveCFlush
   val flushed = Reg(init=Bool(true))
   val flushing = Reg(init=Bool(false))

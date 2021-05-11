@@ -7,7 +7,7 @@ import Chisel._
 import Chisel.ImplicitConversions._
 import chisel3.withClock
 import chisel3.internal.sourceinfo.SourceInfo
-import chisel3.experimental.chiselName
+import chisel3.experimental.{ChiselEnum, chiselName}
 import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.subsystem.CacheBlockBytes
 import freechips.rocketchip.tile._
@@ -15,6 +15,7 @@ import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property._
 import freechips.rocketchip.diplomaticobjectmodel.model.OMSRAM
+
 import scala.collection.mutable.ListBuffer
 
 class PTWReq(implicit p: Parameters) extends CoreBundle()(p) {
@@ -95,6 +96,10 @@ class L2TLBEntry(nSets: Int)(implicit p: Parameters) extends CoreBundle()(p)
   override def cloneType = new L2TLBEntry(nSets).asInstanceOf[this.type]
 }
 
+object PTWState extends ChiselEnum {
+  val s_ready, s_req, s_wait1, s_dummy1, s_wait2, s_wait3, s_dummy2, s_fragment_superpage = Value
+}
+
 @chiselName
 class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(p) {
   val io = new Bundle {
@@ -105,7 +110,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
 
   val omSRAMs = collection.mutable.ListBuffer[OMSRAM]()
 
-  val s_ready :: s_req :: s_wait1 :: s_dummy1 :: s_wait2 :: s_wait3 :: s_dummy2 :: s_fragment_superpage :: Nil = Enum(UInt(), 8)
+  import PTWState._
   val state = Reg(init=s_ready)
   val l2_refill_wire = Wire(Bool())
 

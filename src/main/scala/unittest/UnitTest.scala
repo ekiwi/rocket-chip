@@ -4,6 +4,7 @@ package freechips.rocketchip.unittest
 
 import Chisel._
 import chisel3.MultiIOModule
+import chisel3.experimental.ChiselEnum
 import freechips.rocketchip.config._
 import freechips.rocketchip.util._
 
@@ -36,6 +37,10 @@ abstract class UnitTest(val timeout: Int = 4096) extends Module with UnitTestLeg
 
 case object UnitTests extends Field[Parameters => Seq[UnitTest]]
 
+object UnitTestSuiteState extends ChiselEnum {
+  val s_idle, s_start, s_busy, s_done = Value
+}
+
 class UnitTestSuite(implicit p: Parameters) extends Module {
   val io = new Bundle {
     val finished = Bool(OUTPUT)
@@ -43,7 +48,7 @@ class UnitTestSuite(implicit p: Parameters) extends Module {
 
   val tests = p(UnitTests)(p)
 
-  val s_idle :: s_start :: s_busy :: s_done :: Nil = Enum(Bits(), 4)
+  import UnitTestSuiteState._
   val state = Reg(init = s_idle)
   val tests_finished = Vec(tests.map(_.io.finished)).reduce(_&&_)
 

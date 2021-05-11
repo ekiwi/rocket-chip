@@ -5,6 +5,7 @@ package freechips.rocketchip.rocket
 
 import Chisel._
 import Chisel.ImplicitConversions._
+import chisel3.experimental.ChiselEnum
 import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.diplomaticobjectmodel.model.OMSRAM
@@ -51,6 +52,10 @@ class WritebackReq(params: TLBundleParameters)(implicit p: Parameters) extends L
   override def cloneType = new WritebackReq(params)(p).asInstanceOf[this.type]
 }
 
+object IOMSHRState extends ChiselEnum {
+  val s_idle, s_mem_access, s_mem_ack, s_resp = Value
+}
+
 class IOMSHR(id: Int)(implicit edge: TLEdgeOut, p: Parameters) extends L1HellaCacheModule()(p) {
   val io = new Bundle {
     val req = Decoupled(new HellaCacheReq).flip
@@ -70,7 +75,7 @@ class IOMSHR(id: Int)(implicit edge: TLEdgeOut, p: Parameters) extends L1HellaCa
   val req = Reg(new HellaCacheReq)
   val grant_word = Reg(UInt(width = wordBits))
 
-  val s_idle :: s_mem_access :: s_mem_ack :: s_resp :: Nil = Enum(Bits(), 4)
+  import IOMSHRState._
   val state = Reg(init = s_idle)
   io.req.ready := (state === s_idle)
 
@@ -133,6 +138,11 @@ class IOMSHR(id: Int)(implicit edge: TLEdgeOut, p: Parameters) extends L1HellaCa
   }
 }
 
+object MSHRState extends ChiselEnum {
+  val s_invalid, s_wb_req, s_wb_resp, s_meta_clear, s_refill_req, s_refill_resp,
+      s_meta_write_req, s_meta_write_resp, s_drain_rpq = Value
+}
+
 class MSHR(id: Int)(implicit edge: TLEdgeOut, p: Parameters) extends L1HellaCacheModule()(p) {
   val io = new Bundle {
     val req_pri_val    = Bool(INPUT)
@@ -156,7 +166,7 @@ class MSHR(id: Int)(implicit edge: TLEdgeOut, p: Parameters) extends L1HellaCach
     val probe_rdy = Bool(OUTPUT)
   }
 
-  val s_invalid :: s_wb_req :: s_wb_resp :: s_meta_clear :: s_refill_req :: s_refill_resp :: s_meta_write_req :: s_meta_write_resp :: s_drain_rpq :: Nil = Enum(UInt(), 9)
+  import MSHRState._
   val state = Reg(init=s_invalid)
 
   val req = Reg(new MSHRReqInternal)
@@ -517,6 +527,11 @@ class WritebackUnit(implicit edge: TLEdgeOut, p: Parameters) extends L1HellaCach
   io.release.bits := Mux(req.voluntary, voluntaryRelease, probeResponse)
 }
 
+object ProbeUnitState extends ChiselEnum {
+  val s_invalid, s_meta_read, s_meta_resp, s_mshr_req, s_mshr_resp,
+      s_release, s_writeback_req, s_writeback_resp, s_meta_write = Value
+}
+
 class ProbeUnit(implicit edge: TLEdgeOut, p: Parameters) extends L1HellaCacheModule()(p) {
   val io = new Bundle {
     val req = Decoupled(new TLBundleB(edge.bundle)).flip
@@ -529,9 +544,7 @@ class ProbeUnit(implicit edge: TLEdgeOut, p: Parameters) extends L1HellaCacheMod
     val block_state = new ClientMetadata().asInput
   }
 
-  val (s_invalid :: s_meta_read :: s_meta_resp :: s_mshr_req ::
-       s_mshr_resp :: s_release :: s_writeback_req :: s_writeback_resp :: 
-       s_meta_write :: Nil) = Enum(UInt(), 9)
+  import ProbeUnitState._
   val state = Reg(init=s_invalid)
 
   val req = Reg(new TLBundleB(edge.bundle))

@@ -20,14 +20,15 @@
 package freechips.rocketchip.groundtest
  
 import Chisel._
-import freechips.rocketchip.config.{Parameters}
-import freechips.rocketchip.diplomacy.{ClockCrossingType}
+import chisel3.experimental.ChiselEnum
+import freechips.rocketchip.config.Parameters
+import freechips.rocketchip.diplomacy.ClockCrossingType
 import freechips.rocketchip.rocket._
 import freechips.rocketchip.tile._
 import freechips.rocketchip.tilelink._
-import freechips.rocketchip.subsystem.{TileCrossingParamsLike, CanAttachTile}
+import freechips.rocketchip.subsystem.{CanAttachTile, TileCrossingParamsLike}
 import freechips.rocketchip.util._
-import freechips.rocketchip.prci.{ClockSinkParameters}
+import freechips.rocketchip.prci.ClockSinkParameters
 
 // =======
 // Outline
@@ -207,6 +208,10 @@ class TagMan(val logNumTags : Int) extends Module {
 // Trace generator
 // ===============
 
+object TraceGeneratorOpCode extends ChiselEnum {
+  val opNop, opLoad, opStore, opFence, opLRSC, opSwap, opDelay = Value
+}
+
 class TraceGenerator(val params: TraceGenParams)(implicit val p: Parameters) extends Module
     with HasTraceGenParams {
   val io = new Bundle {
@@ -287,9 +292,7 @@ class TraceGenerator(val params: TraceGenParams)(implicit val p: Parameters) ext
   // given frequency distribution.
 
   // Opcodes
-  val (opNop   :: opLoad :: opStore ::
-       opFence :: opLRSC :: opSwap  ::
-       opDelay :: Nil) = Enum(Bits(), 7)
+  import TraceGeneratorOpCode._
 
   // Distribution specified as a list of (frequency,value) pairs.
   // NOTE: frequencies must sum to a power of two.
@@ -300,7 +303,7 @@ class TraceGenerator(val params: TraceGenParams)(implicit val p: Parameters) ext
     (4,  opFence),
     (3,  opLRSC),
     (3,  opSwap),
-    (2,  opDelay)))
+    (2,  opDelay)).map{ case (k,v) => k -> v.asUInt()})
 
   // Request/response tags
   // ---------------------

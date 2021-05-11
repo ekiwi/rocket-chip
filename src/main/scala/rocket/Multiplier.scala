@@ -4,10 +4,11 @@
 package freechips.rocketchip.rocket
 
 import chisel3._
-import chisel3.util.{Cat, log2Up, log2Ceil, log2Floor, Log2, Decoupled, Enum, Fill, Valid, Pipe}
+import chisel3.util.{Cat, Decoupled, Enum, Fill, Log2, Pipe, Valid, log2Ceil, log2Floor, log2Up}
 import Chisel.ImplicitConversions._
 import freechips.rocketchip.util._
 import ALU._
+import chisel3.experimental.ChiselEnum
 
 class MultiplierReq(dataBits: Int, tagBits: Int) extends Bundle {
   val fn = Bits(SZ_ALU_FN.W)
@@ -38,6 +39,10 @@ case class MulDivParams(
   divEarlyOutGranularity: Int = 1
 )
 
+object MulDivState extends ChiselEnum {
+  val s_ready, s_neg_inputs, s_mul, s_div, s_dummy, s_neg_output, s_done_mul, s_done_div = Value
+}
+
 class MulDiv(cfg: MulDivParams, width: Int, nXpr: Int = 32) extends Module {
   private def minDivLatency = (cfg.divUnroll > 0).option(if (cfg.divEarlyOut) 3 else 1 + w/cfg.divUnroll)
   private def minMulLatency = (cfg.mulUnroll > 0).option(if (cfg.mulEarlyOut) 2 else w/cfg.mulUnroll)
@@ -48,7 +53,7 @@ class MulDiv(cfg: MulDivParams, width: Int, nXpr: Int = 32) extends Module {
   val mulw = if (cfg.mulUnroll == 0) w else (w + cfg.mulUnroll - 1) / cfg.mulUnroll * cfg.mulUnroll
   val fastMulW = if (cfg.mulUnroll == 0) false else w/2 > cfg.mulUnroll && w % (2*cfg.mulUnroll) == 0
  
-  val s_ready :: s_neg_inputs :: s_mul :: s_div :: s_dummy :: s_neg_output :: s_done_mul :: s_done_div :: Nil = Enum(8)
+  import MulDivState._
   val state = RegInit(s_ready)
  
   val req = Reg(chiselTypeOf(io.req.bits))
@@ -173,7 +178,7 @@ class MulDiv(cfg: MulDivParams, width: Int, nXpr: Int = 32) extends Module {
     req := io.req.bits
   }
 
-  val outMul = (state & (s_done_mul ^ s_done_div)) === (s_done_mul & ~s_done_div)
+  val outMul = (state.asUInt() & (s_done_mul.asUInt() ^ s_done_div.asUInt())) === (s_done_mul.asUInt() & ~s_done_div.asUInt())
   val loOut = Mux(fastMulW.B && halfWidth(req) && outMul, result(w-1,w/2), result(w/2-1,0))
   val hiOut = Mux(halfWidth(req), Fill(w/2, loOut(w/2-1)), result(w-1,w/2))
   io.resp.bits.tag := req.tag

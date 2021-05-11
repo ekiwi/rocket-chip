@@ -6,7 +6,7 @@ package freechips.rocketchip.tile
 import chisel3._
 import chisel3.util._
 import chisel3.util.HasBlackBoxResource
-import chisel3.experimental.IntParam
+import chisel3.experimental.{ChiselEnum, IntParam}
 import freechips.rocketchip.config._
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.rocket._
@@ -191,6 +191,10 @@ class  TranslatorExample(opcodes: OpcodeSet)(implicit p: Parameters) extends Laz
   override lazy val module = new TranslatorExampleModuleImp(this)
 }
 
+object TranslatorExampleModuleState extends ChiselEnum {
+  val s_idle, s_ptw_req, s_ptw_resp, s_resp = Value
+}
+
 class TranslatorExampleModuleImp(outer: TranslatorExample)(implicit p: Parameters) extends LazyRoCCModuleImp(outer)
     with HasCoreParameters {
   val req_addr = Reg(UInt(coreMaxAddrBits.W))
@@ -199,7 +203,7 @@ class TranslatorExampleModuleImp(outer: TranslatorExample)(implicit p: Parameter
   val req_vpn = req_addr(coreMaxAddrBits - 1, pgIdxBits)
   val pte = Reg(new PTE)
 
-  val s_idle :: s_ptw_req :: s_ptw_resp :: s_resp :: Nil = Enum(4)
+  import TranslatorExampleModuleState._
   val state = RegInit(s_idle)
 
   io.cmd.ready := (state === s_idle)
@@ -239,6 +243,10 @@ class  CharacterCountExample(opcodes: OpcodeSet)(implicit p: Parameters) extends
   override val atlNode = TLClientNode(Seq(TLMasterPortParameters.v1(Seq(TLMasterParameters.v1("CharacterCountRoCC")))))
 }
 
+object CharacterCountExampleState extends ChiselEnum {
+  val s_idle, s_acq, s_gnt, s_check, s_resp = Value
+}
+
 class CharacterCountExampleModuleImp(outer: CharacterCountExample)(implicit p: Parameters) extends LazyRoCCModuleImp(outer)
   with HasCoreParameters
   with HasL1CacheParameters {
@@ -256,7 +264,7 @@ class CharacterCountExampleModuleImp(outer: CharacterCountExample)(implicit p: P
   val offset = addr(blockOffset - 1, 0)
   val next_addr = (addr_block + 1.U) << blockOffset.U
 
-  val s_idle :: s_acq :: s_gnt :: s_check :: s_resp :: Nil = Enum(5)
+  import CharacterCountExampleState._
   val state = RegInit(s_idle)
 
   val (tl_out, edgesOut) = outer.atlNode.out(0)

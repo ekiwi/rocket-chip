@@ -5,11 +5,11 @@ package freechips.rocketchip.rocket
 
 import Chisel._
 import Chisel.ImplicitConversions._
-
+import chisel3.experimental.ChiselEnum
 import freechips.rocketchip.config.{Field, Parameters}
 import freechips.rocketchip.subsystem.CacheBlockBytes
 import freechips.rocketchip.diplomacy.RegionType
-import freechips.rocketchip.tile.{CoreModule, CoreBundle}
+import freechips.rocketchip.tile.{CoreBundle, CoreModule}
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
 import freechips.rocketchip.util.property._
@@ -150,6 +150,10 @@ case class TLBConfig(
     nSectors: Int = 4,
     nSuperpageEntries: Int = 4)
 
+object TLBState extends ChiselEnum {
+  val s_ready, s_request, s_wait, s_wait_invalidate = Value
+}
+
 class TLB(instruction: Boolean, lgMaxSize: Int, cfg: TLBConfig)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(p) {
   val io = new Bundle {
     val req = Decoupled(new TLBReq(lgMaxSize)).flip
@@ -169,7 +173,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, cfg: TLBConfig)(implicit edge: T
   def all_entries = ordinary_entries ++ special_entry
   def all_real_entries = sectored_entries.flatten ++ superpage_entries ++ special_entry
 
-  val s_ready :: s_request :: s_wait :: s_wait_invalidate :: Nil = Enum(UInt(), 4)
+  import TLBState._
   val state = Reg(init=s_ready)
   val r_refill_tag = Reg(UInt(width = vpnBits))
   val r_superpage_repl_addr = Reg(UInt(log2Ceil(superpage_entries.size).W))

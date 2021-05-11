@@ -4,10 +4,15 @@ package freechips.rocketchip.rocket
 
 import Chisel._
 import Chisel.ImplicitConversions._
+import chisel3.experimental.ChiselEnum
 import freechips.rocketchip.config.Parameters
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.util._
+
+object ScratchpadSlavePortState extends ChiselEnum {
+  val s_ready, s_wait1, s_wait2, s_replay, s_grant = Value
+}
 
 /* This adapter converts between diplomatic TileLink and non-diplomatic HellaCacheIO */
 class ScratchpadSlavePort(address: Seq[AddressSet], coreDataBytes: Int, usingAtomics: Boolean)(implicit p: Parameters) extends LazyModule {
@@ -41,7 +46,7 @@ class ScratchpadSlavePort(address: Seq[AddressSet], coreDataBytes: Int, usingAto
 
     val (tl_in, edge) = node.in(0)
 
-    val s_ready :: s_wait1 :: s_wait2 :: s_replay :: s_grant :: Nil = Enum(UInt(), 5)
+    import ScratchpadSlavePortState._
     val state = Reg(init = s_ready)
     val dmem_req_valid = Wire(Bool())
     when (state === s_wait1) { state := s_wait2 }
