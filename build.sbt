@@ -6,7 +6,7 @@ import scala.sys.process._
 enablePlugins(PackPlugin)
 
 // This needs to stay in sync with the chisel3 and firrtl git submodules
-val chiselVersion = "3.4.3"
+val chiselVersion = "3.5-SNAPSHOT"
 
 lazy val commonSettings = Seq(
   organization := "edu.berkeley.cs",
@@ -58,6 +58,7 @@ lazy val commonSettings = Seq(
 
 lazy val chiselSettings = Seq(
   libraryDependencies ++= Seq("edu.berkeley.cs" %% "chisel3" % chiselVersion),
+  libraryDependencies ++= Seq("edu.berkeley.cs" %% "chiseltest" % "0.5-SNAPSHOT" % "test"),
   addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % chiselVersion cross CrossVersion.full)
 )
 
