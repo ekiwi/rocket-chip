@@ -15,7 +15,8 @@ import freechips.rocketchip.tile.{XLen}
 
 class TraceGenConfig extends Config(
   new WithTraceGen(2)() ++
-  new GroundTestBaseConfig
+  new GroundTestBaseConfig ++
+  new WithCoherentBusTopology
 )
 
 class TraceGenBufferlessConfig extends Config(
