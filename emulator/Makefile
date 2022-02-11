@@ -56,6 +56,18 @@ run: run-asm-tests run-bmark-tests
 run-debug: run-asm-tests-debug run-bmark-tests-debug
 run-fast: run-asm-tests-fast run-bmark-tests-fast
 
+$(output_dir)/$(long_name)_tracegen.out: $(emu)
+	mkdir -p $(output_dir)
+	./$(emu) +max-cycles=$(timeout_cycles) +verbose none &> $@
+
+$(output_dir)/$(long_name)_trace.axe: $(output_dir)/$(long_name)_tracegen.out
+	../scripts/toaxe.py $< > $@
+
+tracegen: $(output_dir)/$(long_name)_trace.axe
+	axe check wmo $<
+
+
+
 .PHONY: run-asm-tests run-bmark-tests
 .PHONY: run-asm-tests-debug run-bmark-tests-debug
 .PHONY: run run-debug run-fast
