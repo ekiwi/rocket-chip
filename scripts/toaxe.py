@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This file was originally written by Matthew Naylor, University of
 # Cambridge.
@@ -27,7 +27,6 @@
 
 import sys
 import re
-import sets
 
 def main():
 
@@ -77,16 +76,22 @@ def main():
   # The previous write to each address by each thread
   prevWrite = {}
 
+  valid_line = re.compile(r'.+:.+#.+@')
+
   for line in f:
+    # skip lines that appear not to be part of the trace (like printouts at the start of simulation)
+    if valid_line.match(line) is None:
+      continue
+
     # Parse thread id and command
     m = re.search(' *([0-9]+) *: *([^ ]*) (.*)', line)
-    if m == None: error("Expected: <thread-id> ':' <command>")
+    if m is None: error("Expected: <thread-id> ':' <command>")
     tid, cmd, line = m.group(1), m.group(2), m.group(3)
   
     if cmd == 'fence-req':
       # Parse time
       m = re.search(' *@ *([0-9]+)', line)
-      if m == None: error ("expected timestamp")
+      if m is None: error ("expected timestamp")
       # Insert placeholder containing request time
       ops.append(str(m.group(1)))
       fenceReq[tid] = len(ops)-1
@@ -98,13 +103,13 @@ def main():
       op = str(tid) + ": sync @ " + startTime
       # Add end-time
       m = re.search(' *@ *([0-9]+)', line)
-      if m != None: op = op + ":" + str(m.group(1))
+      if m is not None: op = op + ":" + str(m.group(1))
       ops[fenceReq[tid]] = (op,)
       fenceReq[tid] = None
     elif cmd == 'load-req' or cmd == 'load-reserve-req':
       # Parse address, tag, and time
       m = re.search(' *([0-9a-fx]+) *# *([0-9]+) *@ *([0-9]+)', line)
-      if m == None: error("expected <address> #<tag> @<timestamp>")
+      if m is None: error("expected <address> #<tag> @<timestamp>")
       # Update address map
       if not (m.group(1) in addrMap):
         addrMap[m.group(1)] = nextAddr
@@ -117,7 +122,7 @@ def main():
     elif cmd == 'store-req' or cmd == 'store-cond-req' or cmd == 'swap-req':
       # Parse value, address, tag, and time
       m = re.search(' *([0-9]+) *([0-9a-fx]+) *# *([0-9]+) *@ *([0-9]+)', line)
-      if m == None: error("expected <value> <address> #<tag> @<timestamp>")
+      if m is None: error("expected <value> <address> #<tag> @<timestamp>")
       # Update address map
       if not (m.group(2) in addrMap):
         addrMap[m.group(2)] = nextAddr
@@ -131,7 +136,7 @@ def main():
     elif cmd == 'resp':
       # Parse value and timestamp
       m = re.search(' *([0-9]+) *# *([0-9]+) *@ *([0-9]+)', line)
-      if m == None: error("expected <value> #<tag> @<timestamp>")
+      if m is None: error("expected <value> #<tag> @<timestamp>")
       # Find corresponding response
       tag = m.group(2)
       if not ((tid, tag) in tagMap) or tagMap[(tid, tag)] == None:
@@ -154,7 +159,7 @@ def main():
       elif c == 'load-reserve-req':
         ops[opId] = (m.group(1), start, m.group(3))
       elif c == 'store-cond-req':
-        if lr == None: error("store conditional without load-reserve")
+        if lr is None: error("store conditional without load-reserve")
         (loadVal, loadStart, loadFin) = ops[lr]
         scCount = scCount + 1
         if int(m.group(1)) != 0:
@@ -180,19 +185,19 @@ def main():
     lineCount = lineCount+1
 
   # Print statistics
-  if (scCount > 0):
+  if scCount > 0:
     scSuccessRate = str(scSuccessCount/float(scCount))[0:6]
     print("# LRSC_Success_Rate=" + scSuccessRate)
-    if statsFile != None:
+    if statsFile is not None:
       statsFile.write("LRSC_Success_Rate=" + scSuccessRate + "\n")
     
-  if (loadCount > 0):
+  if loadCount > 0:
     loadExtRate = str(loadExtCount/float(loadCount))[0:6]
     print("# Load_External_Rate=" + loadExtRate)
-    if statsFile != None:
+    if statsFile is not None:
       statsFile.write("Load_External_Rate=" + loadExtRate + "\n")
 
-  if statsFile != None:
+  if statsFile is not None:
     statsFile.close()
 
   # Print address map in comments
@@ -201,8 +206,8 @@ def main():
 
   # Print axe trace
   for op in ops:
-    if op != None and isinstance(op, tuple) and len(op) == 1:
-      print op[0]
+    if op is not None and isinstance(op, tuple) and len(op) == 1:
+      print(op[0])
 
 try:
   main()
