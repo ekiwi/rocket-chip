@@ -46,7 +46,7 @@ double sc_time_stamp()
 int main(int argc, char** argv)
 {
   unsigned random_seed = (unsigned)time(NULL) ^ (unsigned)getpid();
-  uint64_t max_cycles = -1;
+  uint64_t max_cycles = static_cast<uint64_t>(1) << 63;
   int ret = 0;
   bool print_cycles = false;
 
